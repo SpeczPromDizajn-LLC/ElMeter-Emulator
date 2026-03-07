@@ -110,17 +110,17 @@ type
   procedure CallRx80Full;
   procedure CallRxChar;
   procedure CallTxEmpty;
-  procedure SetBaudRate(const Value: TBaudRate);
-  procedure SetByteSize(const Value: TByteSize);
-  procedure SetCTPriority(const Value: TThreadPriority);
-  procedure SetInBufSize(const Value: Integer);
-  procedure SetOutBufSize(const Value: Integer);
-  procedure SetParity(const Value: TParity);
-  procedure SetPort(const Value: string);
-  procedure SetStopBits(const Value: TStopBits);
-  procedure SetSyncMethod(const Value: TSyncMethod);
-  procedure SetTimeouts(const Value: TCOMTimeouts);
-  procedure WindowMethod(var Message: TMessage);
+  procedure SetBaudRate(const pValue: TBaudRate);
+  procedure SetByteSize(const pValue: TByteSize);
+  procedure SetCTPriority(const pValue: TThreadPriority);
+  procedure SetInBufSize(const pValue: Integer);
+  procedure SetOutBufSize(const pValue: Integer);
+  procedure SetParity(const pValue: TParity);
+  procedure SetPort(const pValue: string);
+  procedure SetStopBits(const pValue: TStopBits);
+  procedure SetSyncMethod(const pValue: TSyncMethod);
+  procedure SetTimeouts(const pValue: TCOMTimeouts);
+  procedure WindowMethod(var pMessage: TMessage);
  protected
   procedure ApplyBuffer;
   procedure ApplyDCB;
@@ -277,7 +277,7 @@ procedure TCOMThread.Execute;
  var
   EventHandles:               array [0 .. 1] of THandle;
   Overlapped:                 TOverlapped;
-  Signaled, BytesTrans, Mask: LongWord;
+  Signaled, BytesTrans, Mask: UInt32;
 
  begin
   FillChar(Overlapped, SizeOf(Overlapped), 0);
@@ -500,9 +500,9 @@ procedure TCOMPort.DestroyHandle;
    CloseHandle(FHandle);
  end;
 
-procedure TCOMPort.WindowMethod(var Message: TMessage);
+procedure TCOMPort.WindowMethod(var pMessage: TMessage);
  begin
-  with Message do
+  with pMessage do
    if Msg = CM_COMPORT then
     try
      if InSendMessage then
@@ -601,6 +601,7 @@ function TCOMPort.Close: Boolean;
 procedure TCOMPort.ApplyDCB;
  const
   CBaudRate: array [TBaudRate] of Integer = (CBR_1200, CBR_2400, CBR_4800, CBR_9600, CBR_19200, CBR_38400, CBR_57600, CBR_115200);
+
  var
   DCB: TDCB;
 
@@ -630,12 +631,12 @@ procedure TCOMPort.ApplyTimeouts;
  var
   Timeouts: TCommTimeouts;
 
-  function MValue(const Value: Integer): LongWord;
+  function MValue(const pValue: Integer): UInt32;
    begin
-    if Value < 0 then
+    if pValue < 0 then
      Result := MAXDWORD
     else
-     Result := Value;
+     Result := pValue;
    end;
 
  begin
@@ -655,8 +656,10 @@ procedure TCOMPort.ApplyTimeouts;
 procedure TCOMPort.ApplyBuffer;
  begin
   if FConnected and FUpdate then
-   if not SetupComm(FHandle, FInBufSize, FOutBufSize) then
-    raise ECOMPort.Create(STR_ERROR_SETUP_COMM);
+   begin
+    if not SetupComm(FHandle, FInBufSize, FOutBufSize) then
+     raise ECOMPort.Create(STR_ERROR_SETUP_COMM);
+   end;
  end;
 
 procedure TCOMPort.SetupCOMPort;
@@ -668,29 +671,31 @@ procedure TCOMPort.SetupCOMPort;
 
 function TCOMPort.InBufCount: Integer;
  var
-  Errors:  LongWord;
+  Errors:  UInt32;
   ComStat: TCOMStat;
 
  begin
   if not ClearCommError(FHandle, Errors, @ComStat) then
    raise ECOMPort.Create(STR_ERROR_CLEAR_COMM_ERROR);
+
   Result := ComStat.cbInQue;
  end;
 
 function TCOMPort.OutBufCount: Integer;
  var
-  Errors:  LongWord;
+  Errors:  UInt32;
   ComStat: TCOMStat;
 
  begin
   if not ClearCommError(FHandle, Errors, @ComStat) then
    raise ECOMPort.Create(STR_ERROR_CLEAR_COMM_ERROR);
+
   Result := ComStat.cbOutQue;
  end;
 
 function TCOMPort.Signals: TCOMSignals;
  var
-  Status: LongWord;
+  Status: UInt32;
 
  begin
   if not GetCommModemStatus(FHandle, Status) then
@@ -713,7 +718,7 @@ function TCOMPort.Signals: TCOMSignals;
 
 procedure TCOMPort.SetDTR(pState: Boolean);
  var
-  Act: LongWord;
+  Act: UInt32;
 
  begin
   if pState then
@@ -727,7 +732,7 @@ procedure TCOMPort.SetDTR(pState: Boolean);
 
 procedure TCOMPort.SetRTS(pState: Boolean);
  var
-  Act: LongWord;
+  Act: UInt32;
 
  begin
   if pState then
@@ -741,7 +746,7 @@ procedure TCOMPort.SetRTS(pState: Boolean);
 
 procedure TCOMPort.ClearBuffer(pInput, pOutput: Boolean);
  var
-  Flag: LongWord;
+  Flag: UInt32;
 
  begin
   Flag := 0;
@@ -774,7 +779,7 @@ procedure PrepareAsync(pKind: TOperationKind; const pBuffer; pCount: Integer; pA
 function TCOMPort.Write(const pBuffer; pCount: Integer): Integer;
  var
   Success:    Boolean;
-  BytesTrans: LongWord;
+  BytesTrans: UInt32;
   AsyncPtr:   PAsync;
 
  begin
@@ -804,7 +809,7 @@ function TCOMPort.WriteStr(const pStr: AnsiString): Integer;
 function TCOMPort.Read(var pBuffer; pCount: Integer): Integer;
  var
   Success:    Boolean;
-  BytesTrans: LongWord;
+  BytesTrans: UInt32;
   AsyncPtr:   PAsync;
 
  begin
@@ -828,15 +833,15 @@ function TCOMPort.Read(var pBuffer; pCount: Integer): Integer;
 
 function TCOMPort.ReadStr(pCount: Integer): AnsiString;
  var
-  buf:    array of Byte;
-  i, cnt: Integer;
+  buf: array of Byte;
+  cnt: Integer;
 
  begin
   SetLength(buf, pCount);
 
   cnt := Read(buf[0], pCount);
 
-  for i := 0 to cnt - 1 do
+  for var i := 0 to cnt - 1 do
    Result := Result + AnsiChar(buf[i]);
  end;
 
@@ -850,7 +855,7 @@ function ErrorCode(AsyncPtr: PAsync): AnsiString;
 
 function TCOMPort.WaitForAsync(var pAsyncPtr: PAsync): Integer;
  var
-  BytesTrans, Signaled: LongWord;
+  BytesTrans, Signaled: UInt32;
   Success:              Boolean;
 
  begin
@@ -874,7 +879,7 @@ procedure TCOMPort.AbortAllAsync;
 
 function TCOMPort.IsAsyncCompleted(pAsyncPtr: PAsync): Boolean;
  var
-  BytesTrans: LongWord;
+  BytesTrans: UInt32;
 
  begin
   if pAsyncPtr = nil then
@@ -883,8 +888,10 @@ function TCOMPort.IsAsyncCompleted(pAsyncPtr: PAsync): Boolean;
   Result := GetOverlappedResult(FHandle, pAsyncPtr^.Overlapped, BytesTrans, FALSE);
 
   if not Result then
-   if (GetLastError <> ERROR_IO_PENDING) and (GetLastError <> ERROR_IO_INCOMPLETE) then
-    raise ECOMPort.Create(STR_STATUS_ASYNC_IS_NOT_GET);
+   begin
+    if (GetLastError <> ERROR_IO_PENDING) and (GetLastError <> ERROR_IO_INCOMPLETE) then
+     raise ECOMPort.Create(STR_STATUS_ASYNC_IS_NOT_GET);
+   end;
  end;
 
 procedure TCOMPort.CallCTSChange;
@@ -908,7 +915,7 @@ procedure TCOMPort.CallRLSDChange;
 procedure TCOMPort.CallError;
  var
   Errs:    TCOMErrors;
-  Errors:  LongWord;
+  Errors:  UInt32;
   ComStat: TCOMStat;
 
  begin
@@ -973,98 +980,104 @@ procedure TCOMPort.CallTxEmpty;
    FOnTxEmpty(Self);
  end;
 
-procedure TCOMPort.SetBaudRate(const Value: TBaudRate);
+procedure TCOMPort.SetBaudRate(const pValue: TBaudRate);
  begin
-  if Value <> FBaudRate then
+  if pValue <> FBaudRate then
    begin
-    FBaudRate := Value;
+    FBaudRate := pValue;
     ApplyDCB;
    end;
  end;
 
-procedure TCOMPort.SetByteSize(const Value: TByteSize);
+procedure TCOMPort.SetByteSize(const pValue: TByteSize);
  begin
-  if Value <> FByteSize then
+  if pValue <> FByteSize then
    begin
-    FByteSize := Value;
+    FByteSize := pValue;
     ApplyDCB;
    end;
  end;
 
-procedure TCOMPort.SetParity(const Value: TParity);
+procedure TCOMPort.SetParity(const pValue: TParity);
  begin
-  if Value <> FParity then
+  if pValue <> FParity then
    begin
-    FParity := Value;
+    FParity := pValue;
     ApplyDCB;
    end;
  end;
 
-procedure TCOMPort.SetPort(const Value: string);
+procedure TCOMPort.SetPort(const pValue: string);
  begin
   if FConnected then
    raise ECOMPort.Create(STR_MUST_NO_PROPERTY_FOR_OPEN_PORT)
   else
-   if Value <> FPort then
-    FPort := Value;
+   begin
+    if pValue <> FPort then
+     FPort := pValue;
+   end;
  end;
 
-procedure TCOMPort.SetStopBits(const Value: TStopBits);
+procedure TCOMPort.SetStopBits(const pValue: TStopBits);
  begin
-  if Value <> FStopBits then
+  if pValue <> FStopBits then
    begin
-    FStopBits := Value;
+    FStopBits := pValue;
     ApplyDCB;
    end;
  end;
 
-procedure TCOMPort.SetSyncMethod(const Value: TSyncMethod);
+procedure TCOMPort.SetSyncMethod(const pValue: TSyncMethod);
  begin
-  if Value <> FSyncMethod then
+  if pValue <> FSyncMethod then
    begin
     if FConnected then
      raise ECOMPort.Create(STR_MUST_NO_PROPERTY_FOR_OPEN_PORT)
     else
-     FSyncMethod := Value;
+     FSyncMethod := pValue;
    end;
  end;
 
-procedure TCOMPort.SetCTPriority(const Value: TThreadPriority);
+procedure TCOMPort.SetCTPriority(const pValue: TThreadPriority);
  begin
-  if Value <> FCTPriority then
+  if pValue <> FCTPriority then
    begin
     if FConnected then
      raise ECOMPort.Create(STR_MUST_NO_PROPERTY_FOR_OPEN_PORT)
     else
-     FCTPriority := Value;
+     FCTPriority := pValue;
    end;
  end;
 
-procedure TCOMPort.SetInBufSize(const Value: Integer);
+procedure TCOMPort.SetInBufSize(const pValue: Integer);
  begin
-  if Value <> FInBufSize then
+  if pValue <> FInBufSize then
    begin
-    FInBufSize := Value;
+    FInBufSize := pValue;
+
     if (FInBufSize mod 2) = 1 then
      Dec(FInBufSize);
+
     ApplyBuffer;
    end;
  end;
 
-procedure TCOMPort.SetOutBufSize(const Value: Integer);
+procedure TCOMPort.SetOutBufSize(const pValue: Integer);
  begin
-  if Value <> FOutBufSize then
+  if pValue <> FOutBufSize then
    begin
-    FOutBufSize := Value;
+    FOutBufSize := pValue;
+
     if (FOutBufSize mod 2) = 1 then
      Dec(FOutBufSize);
+
     ApplyBuffer;
    end;
  end;
 
-procedure TCOMPort.SetTimeouts(const Value: TCOMTimeouts);
+procedure TCOMPort.SetTimeouts(const pValue: TCOMTimeouts);
  begin
-  FTimeouts.Assign(Value);
+  FTimeouts.Assign(pValue);
   ApplyTimeouts;
  end;
 
@@ -1100,7 +1113,7 @@ procedure EnumCOMPorts(pPorts: TStrings);
   KeyHandle:                    HKEY;
   ErrCode, Index:               Integer;
   ValueName, Data:              string;
-  ValueLen, DataLen, ValueType: LongWord;
+  ValueLen, DataLen, ValueType: UInt32;
   TmpPorts:                     TStringList;
 
  begin
@@ -1128,8 +1141,10 @@ procedure EnumCOMPorts(pPorts: TStrings);
       Inc(Index);
      end
     else
-     if ErrCode <> ERROR_NO_MORE_ITEMS then
-      raise ECOMPort.Create(STR_ERROR_REGISTRY);
+     begin
+      if ErrCode <> ERROR_NO_MORE_ITEMS then
+       raise ECOMPort.Create(STR_ERROR_REGISTRY);
+     end;
    until (ErrCode <> ERROR_SUCCESS);
 
    TmpPorts.Sort;

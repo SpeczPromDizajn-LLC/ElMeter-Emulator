@@ -17,8 +17,8 @@ type
  TParity         = (paNone, paOdd, paEven, paMark, paSpace);
  TStopBits       = (sb1, sb1_5, sb2);
  TSyncMethod     = (smThreadSync, smWindowSync, smNone);
- TComSignalEvent = procedure(Sender: TObject; pState: Boolean) of object;
- TComErrorEvent  = procedure(Sender: TObject; pErrors: TCOMErrors) of object;
+ TCOMSignalEvent = procedure(Sender: TObject; pState: Boolean) of object;
+ TCOMErrorEvent  = procedure(Sender: TObject; pErrors: TCOMErrors) of object;
  TRxCharEvent    = procedure(Sender: TObject; pCount: Integer) of object;
 
  TOperationKind = (okWrite, okRead);
@@ -94,11 +94,11 @@ type
   FTimeouts:     TCOMTimeouts;
   FUpdate:       Boolean;
   FWindow:       THandle;
-  FOnCTSChange:  TComSignalEvent;
-  FOnDSRChange:  TComSignalEvent;
-  FOnError:      TComErrorEvent;
+  FOnCTSChange:  TCOMSignalEvent;
+  FOnDSRChange:  TCOMSignalEvent;
+  FOnError:      TCOMErrorEvent;
   FOnRing:       TNotifyEvent;
-  FOnRLSDChange: TComSignalEvent;
+  FOnRLSDChange: TCOMSignalEvent;
   FOnRx80Full:   TNotifyEvent;
   FOnRxChar:     TRxCharEvent;
   FOnTxEmpty:    TNotifyEvent;
@@ -160,11 +160,11 @@ type
   property SyncMethod:   TSyncMethod read FSyncMethod write SetSyncMethod;
   property StopBits:     TStopBits read FStopBits write SetStopBits;
   property Timeouts:     TCOMTimeouts read FTimeouts write SetTimeouts;
-  property OnCTSChange:  TComSignalEvent read FOnCTSChange write FOnCTSChange;
-  property OnDSRChange:  TComSignalEvent read FOnDSRChange write FOnDSRChange;
-  property OnError:      TComErrorEvent read FOnError write FOnError;
+  property OnCTSChange:  TCOMSignalEvent read FOnCTSChange write FOnCTSChange;
+  property OnDSRChange:  TCOMSignalEvent read FOnDSRChange write FOnDSRChange;
+  property OnError:      TCOMErrorEvent read FOnError write FOnError;
   property OnRing:       TNotifyEvent read FOnRing write FOnRing;
-  property OnRLSDChange: TComSignalEvent read FOnRLSDChange write FOnRLSDChange;
+  property OnRLSDChange: TCOMSignalEvent read FOnRLSDChange write FOnRLSDChange;
   property OnRx80Full:   TNotifyEvent read FOnRx80Full write FOnRx80Full;
   property OnRxChar:     TRxCharEvent read FOnRxChar write FOnRxChar;
   property OnTxEmpty:    TNotifyEvent read FOnTxEmpty write FOnTxEmpty;
@@ -172,9 +172,9 @@ type
 
  ECOMPort = class(Exception);
 
-procedure InitAsync(var pAsyncPtr: PAsync);
-procedure DoneAsync(var pAsyncPtr: PAsync);
-procedure EnumCOMPorts(pPorts: TStrings);
+procedure comInitAsync(var pAsyncPtr: PAsync);
+procedure comDoneAsync(var pAsyncPtr: PAsync);
+procedure comEnumPorts(pPorts: TStrings);
 
 procedure Register;
 
@@ -783,7 +783,7 @@ function TCOMPort.Write(const pBuffer; pCount: Integer): Integer;
   AsyncPtr:   PAsync;
 
  begin
-  InitAsync(AsyncPtr);
+  comInitAsync(AsyncPtr);
 
   try
    if AsyncPtr = nil then
@@ -797,7 +797,7 @@ function TCOMPort.Write(const pBuffer; pCount: Integer): Integer;
 
    Result := WaitForAsync(AsyncPtr);
   finally
-   DoneAsync(AsyncPtr);
+   comDoneAsync(AsyncPtr);
   end;
  end;
 
@@ -813,7 +813,7 @@ function TCOMPort.Read(var pBuffer; pCount: Integer): Integer;
   AsyncPtr:   PAsync;
 
  begin
-  InitAsync(AsyncPtr);
+  comInitAsync(AsyncPtr);
 
   try
    if AsyncPtr = nil then
@@ -827,7 +827,7 @@ function TCOMPort.Read(var pBuffer; pCount: Integer): Integer;
 
    Result := WaitForAsync(AsyncPtr);
   finally
-   DoneAsync(AsyncPtr);
+   comDoneAsync(AsyncPtr);
   end;
  end;
 
@@ -1081,7 +1081,7 @@ procedure TCOMPort.SetTimeouts(const pValue: TCOMTimeouts);
   ApplyTimeouts;
  end;
 
-procedure InitAsync(var pAsyncPtr: PAsync);
+procedure comInitAsync(var pAsyncPtr: PAsync);
  begin
   New(pAsyncPtr);
 
@@ -1094,7 +1094,7 @@ procedure InitAsync(var pAsyncPtr: PAsync);
    end;
  end;
 
-procedure DoneAsync(var pAsyncPtr: PAsync);
+procedure comDoneAsync(var pAsyncPtr: PAsync);
  begin
   with pAsyncPtr^ do
    begin
@@ -1108,7 +1108,7 @@ procedure DoneAsync(var pAsyncPtr: PAsync);
   pAsyncPtr := nil;
  end;
 
-procedure EnumCOMPorts(pPorts: TStrings);
+procedure comEnumPorts(pPorts: TStrings);
  var
   KeyHandle:                    HKEY;
   ErrCode, Index:               Integer;

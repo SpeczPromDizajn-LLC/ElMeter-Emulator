@@ -4,7 +4,7 @@ object frmMain: TfrmMain
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = #1069#1084#1091#1083#1103#1090#1086#1088' '#1101#1083#1077#1082#1090#1088#1086#1089#1095#1105#1090#1095#1080#1082#1086#1074
-  ClientHeight = 249
+  ClientHeight = 265
   ClientWidth = 711
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -329,12 +329,19 @@ object frmMain: TfrmMain
   end
   object btnStop: TSpeedButton
     Left = 8
-    Top = 208
+    Top = 223
     Width = 113
     Height = 33
     AllowAllUp = True
     GroupIndex = 1
     Caption = #1057#1058#1054#1055
+  end
+  object Label1: TLabel
+    Left = 9
+    Top = 44
+    Width = 98
+    Height = 13
+    Caption = #1057#1082#1086#1088#1086#1089#1090#1100' ('#1073#1080#1090'/'#1089#1077#1082')'
   end
   object edtTariff5: TLabeledEdit
     Left = 594
@@ -374,9 +381,9 @@ object frmMain: TfrmMain
   end
   object rbElMeter: TRadioGroup
     Left = 8
-    Top = 46
+    Top = 86
     Width = 113
-    Height = 156
+    Height = 131
     Caption = #1069#1083#1077#1082#1090#1088#1086#1089#1095#1105#1090#1095#1080#1082
     ItemIndex = 0
     Items.Strings = (
@@ -484,28 +491,30 @@ object frmMain: TfrmMain
     Left = 130
     Top = 87
     Width = 574
-    Height = 154
+    Height = 169
     Style = lbOwnerDrawFixed
     ItemHeight = 26
     TabOrder = 12
     OnDrawItem = lbLogDrawItem
   end
-  object COM: TCOMPort
-    BaudRate = br9600
-    ByteSize = bs8
-    InBufSize = 2048
-    OutBufSize = 2048
-    Parity = paNone
-    Port = 'COM1'
-    SyncMethod = smThreadSync
-    StopBits = sb1
-    Timeouts.ReadInterval = -1
-    Timeouts.ReadTotalMultiplier = 0
-    Timeouts.ReadTotalConstant = 0
-    Timeouts.WriteTotalMultiplier = 100
-    Timeouts.WriteTotalConstant = 1000
-    OnRxChar = COMRxChar
-    Left = 16
-    Top = 8
+  object cbRate: TComboBox
+    Left = 8
+    Top = 59
+    Width = 113
+    Height = 21
+    Style = csDropDownList
+    ItemIndex = 0
+    TabOrder = 13
+    Text = '1200'
+    OnChange = cbRateChange
+    Items.Strings = (
+      '1200'
+      '2400'
+      '4800'
+      '9600'
+      '19200'
+      '38400'
+      '57600'
+      '115200')
   end
 end

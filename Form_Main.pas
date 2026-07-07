@@ -9,7 +9,6 @@ uses
 
 type
  TfrmMain = class(TForm)
-  COM: TCOMPort;
   edtTariff5: TLabeledEdit;
   edtTariff1: TLabeledEdit;
   edtTariff3: TLabeledEdit;
@@ -25,16 +24,19 @@ type
   edtFreq: TLabeledEdit;
   btnStop: TSpeedButton;
   lbLog: TListBox;
+  cbRate: TComboBox;
+  Label1: TLabel;
   procedure COMRxChar(Sender: TObject; Count: Integer);
   procedure FormCreate(Sender: TObject);
   procedure FormClose(Sender: TObject; var Action: TCloseAction);
   procedure rbElMeterClick(Sender: TObject);
   procedure cbCOMChange(Sender: TObject);
+  procedure cbRateChange(Sender: TObject);
   procedure lbLogDrawItem(Control: TWinControl; Index: Integer; Rect: TRect; State: TOwnerDrawState);
   procedure FormActivate(Sender: TObject);
  private
  public
-  procedure OpenCOM(nCOM: Integer);
+  procedure OpenCOM(nCOM: Integer; pRate: TBaudRate);
   procedure AddLog(pStr: string);
  end;
 
@@ -49,7 +51,8 @@ uses
  StrUtils, VersionInfo, Common, UDialogs, Class_ElMeter, Registry, UStrings;
 
 var
- InitCOM:     Integer      = 0;
+ InitCOM:     Integer = 0;
+ COM:         TCOMPort;
  ElMeterType: TElMeterType = emMercury206;
  ElMeter:     TElMeter;
 
@@ -63,11 +66,12 @@ procedure TfrmMain.AddLog(pStr: string);
   lbLog.ItemIndex := lbLog.Items.Count - 1;
  end;
 
-procedure TfrmMain.OpenCOM(nCOM: Integer);
+procedure TfrmMain.OpenCOM(nCOM: Integer; pRate: TBaudRate);
  begin
   try
    COM.Close;
    COM.Port := 'COM' + IntToStr(nCOM);
+   COM.BaudRate := pRate;
    COM.Open;
   except
    MessageBoxOK(PChar(Format(STR_ERROR_OPEN_PORT, [nCOM])), PChar(Application.Title), mbtError);
@@ -87,7 +91,19 @@ procedure TfrmMain.cbCOMChange(Sender: TObject);
  begin
   s := cbCOM.Text;
   InitCOM := StrToIntDef(Copy(s, 4, Length(s) - 3), 1);
-  OpenCOM(InitCOM);
+  OpenCOM(InitCOM, TBaudRate(cbRate.ItemIndex));
+ end;
+
+procedure TfrmMain.cbRateChange(Sender: TObject);
+ begin
+  if COM = nil then
+   Exit;
+
+  try
+   COM.BaudRate := TBaudRate(cbRate.ItemIndex);
+  except
+   MessageBoxOK(PChar(Format(STR_ERROR_OPEN_PORT, [InitCOM])), PChar(Application.Title), mbtError);
+  end;
  end;
 
 procedure TfrmMain.COMRxChar(Sender: TObject; Count: Integer);
@@ -206,7 +222,7 @@ procedure TfrmMain.FormActivate(Sender: TObject);
   if FirstRun then
    begin
     FirstRun := FALSE;
-    OpenCOM(InitCOM);
+    OpenCOM(InitCOM, TBaudRate(cbRate.ItemIndex));
    end;
  end;
 
@@ -229,7 +245,12 @@ procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
   end;
 
   reg := TRegIniFile.Create(REG_INI);
+
   reg.WriteInteger('Hardware', 'COM', InitCOM);
+  reg.WriteInteger('Hardware', 'RateIdx', Integer(COM.BaudRate));
+  reg.WriteInteger('Hardware', 'ByteSizeIdx', Integer(COM.ByteSize));
+  reg.WriteInteger('Hardware', 'ParityIdx', Integer(COM.Parity));
+
   reg.WriteInteger('Hardware', 'IdxMeter', Ord(ElMeterType));
   reg.WriteString('Params', 'SN', edtSN.Text);
   reg.WriteString('Params', 'U', edtU.Text);
@@ -241,6 +262,7 @@ procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
   reg.WriteString('Params', 'Tariff3', edtTariff3.Text);
   reg.WriteString('Params', 'Tariff4', edtTariff4.Text);
   reg.WriteString('Params', 'Tariff5', edtTariff5.Text);
+
   reg.Free;
  end;
 
@@ -255,7 +277,10 @@ procedure TfrmMain.FormCreate(Sender: TObject);
   VerInfo.Free;
 
   reg := TRegIniFile.Create(REG_INI);
+
   InitCOM := reg.ReadInteger('Hardware', 'COM', 1);
+  cbRate.ItemIndex := reg.ReadInteger('Hardware', 'RateIdx', 3);
+
   ElMeterType := TElMeterType(reg.ReadInteger('Hardware', 'IdxMeter', 0));
   edtSN.Text := reg.ReadString('Params', 'SN', '1234');
   edtU.Text := reg.ReadString('Params', 'U', '230,15');
@@ -267,11 +292,19 @@ procedure TfrmMain.FormCreate(Sender: TObject);
   edtTariff3.Text := reg.ReadString('Params', 'Tariff3', '12345');
   edtTariff4.Text := reg.ReadString('Params', 'Tariff4', '12345');
   edtTariff5.Text := reg.ReadString('Params', 'Tariff5', '12345');
+
   reg.Free;
 
   cbCOM.Clear;
 
   comEnumPorts(cbCOM.Items);
+
+  COM := TCOMPort.Create;
+  COM.BaudRate := TBaudRate(cbRate.ItemIndex);
+  COM.ByteSize := bs8;
+  COM.Parity := paNone;
+  COM.StopBits := sb1;
+  COM.OnRxChar := COMRxChar;
 
   cbCOM.OnChange := nil;
   cbCOM.ItemIndex := cbCOM.Items.IndexOf('COM' + IntToStr(InitCOM));

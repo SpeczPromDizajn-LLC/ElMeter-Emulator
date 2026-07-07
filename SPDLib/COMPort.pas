@@ -1,3 +1,13 @@
+// (c) SpeczPromDizajn LLC, 2026
+// INN/KPP 6230093924/623001001
+// DUNS 362165653
+// 6 Yablochkova Proezd, office 718, Ryazan, Russia
+// Web: https://spd.net.ru
+// e-mail: info@spd.net.ru
+// Phone: +7 (4912) 52-47-14
+
+// v. 3.6
+
 unit COMPort;
 
 interface
@@ -5,11 +15,8 @@ interface
 uses
  Windows, Messages, SysUtils, Classes;
 
-{$B-,H+,X+}
-
 type
- TBaudRate = (br1200, br2400, br4800, br9600, br19200, br38400, br57600, br115200);
-
+ TBaudRate       = (br1200, br2400, br4800, br9600, br19200, br38400, br57600, br115200);
  TByteSize       = (bs5, bs6, bs7, bs8);
  TCOMErrors      = set of (ceFrame, ceRxParity, ceOverrun, ceBreak, ceIO, ceMode, ceRxOver, ceTxFull);
  TCOMEvents      = set of (evRxChar, evTxEmpty, evRing, evCTS, evDSR, evRLSD, evError, evRx80Full);
@@ -76,7 +83,7 @@ type
   property WriteTotalConstant:   Integer read FWriteTotalC write SetWriteTotalC;
  end;
 
- TCOMPort = class(TComponent)
+ TCOMPort = class
  private
   FBaudRate:     TBaudRate;
   FByteSize:     TByteSize;
@@ -112,7 +119,6 @@ type
   procedure CallTxEmpty;
   procedure SetBaudRate(const pValue: TBaudRate);
   procedure SetByteSize(const pValue: TByteSize);
-  procedure SetCTPriority(const pValue: TThreadPriority);
   procedure SetInBufSize(const pValue: Integer);
   procedure SetOutBufSize(const pValue: Integer);
   procedure SetParity(const pValue: TParity);
@@ -129,7 +135,7 @@ type
   procedure DestroyHandle;
   procedure SetupCOMPort;
  public
-  constructor Create(pOwner: TComponent); override;
+  constructor Create;
   destructor Destroy; override;
   procedure AbortAllAsync;
   procedure BeginUpdate;
@@ -149,25 +155,23 @@ type
   function Write(const pBuffer; pCount: Integer): Integer;
   function WriteStr(const pStr: AnsiString): Integer;
   property Connected: Boolean read FConnected;
-  property CTPriority: TThreadPriority read FCTPriority write SetCTPriority;
- published
-  property BaudRate:     TBaudRate read FBaudRate write SetBaudRate;
-  property ByteSize:     TByteSize read FByteSize write SetByteSize;
-  property InBufSize:    Integer read FInBufSize write SetInBufSize;
-  property OutBufSize:   Integer read FOutBufSize write SetOutBufSize;
-  property Parity:       TParity read FParity write SetParity;
-  property Port:         string read FPort write SetPort;
-  property SyncMethod:   TSyncMethod read FSyncMethod write SetSyncMethod;
-  property StopBits:     TStopBits read FStopBits write SetStopBits;
-  property Timeouts:     TCOMTimeouts read FTimeouts write SetTimeouts;
-  property OnCTSChange:  TCOMSignalEvent read FOnCTSChange write FOnCTSChange;
-  property OnDSRChange:  TCOMSignalEvent read FOnDSRChange write FOnDSRChange;
-  property OnError:      TCOMErrorEvent read FOnError write FOnError;
-  property OnRing:       TNotifyEvent read FOnRing write FOnRing;
+  property BaudRate: TBaudRate read FBaudRate write SetBaudRate;
+  property ByteSize: TByteSize read FByteSize write SetByteSize;
+  property InBufSize: Integer read FInBufSize write SetInBufSize;
+  property OutBufSize: Integer read FOutBufSize write SetOutBufSize;
+  property Parity: TParity read FParity write SetParity;
+  property Port: string read FPort write SetPort;
+  property SyncMethod: TSyncMethod read FSyncMethod write SetSyncMethod;
+  property StopBits: TStopBits read FStopBits write SetStopBits;
+  property Timeouts: TCOMTimeouts read FTimeouts write SetTimeouts;
+  property OnCTSChange: TCOMSignalEvent read FOnCTSChange write FOnCTSChange;
+  property OnDSRChange: TCOMSignalEvent read FOnDSRChange write FOnDSRChange;
+  property OnError: TCOMErrorEvent read FOnError write FOnError;
+  property OnRing: TNotifyEvent read FOnRing write FOnRing;
   property OnRLSDChange: TCOMSignalEvent read FOnRLSDChange write FOnRLSDChange;
-  property OnRx80Full:   TNotifyEvent read FOnRx80Full write FOnRx80Full;
-  property OnRxChar:     TRxCharEvent read FOnRxChar write FOnRxChar;
-  property OnTxEmpty:    TNotifyEvent read FOnTxEmpty write FOnTxEmpty;
+  property OnRx80Full: TNotifyEvent read FOnRx80Full write FOnRx80Full;
+  property OnRxChar: TRxCharEvent read FOnRxChar write FOnRxChar;
+  property OnTxEmpty: TNotifyEvent read FOnTxEmpty write FOnTxEmpty;
  end;
 
  ECOMPort = class(Exception);
@@ -175,8 +179,6 @@ type
 procedure comInitAsync(var pAsyncPtr: PAsync);
 procedure comDoneAsync(var pAsyncPtr: PAsync);
 procedure comEnumPorts(pPorts: TStrings);
-
-procedure Register;
 
 implementation
 
@@ -260,14 +262,12 @@ function IntToEvents(Mask: Integer): TCOMEvents;
    Result := Result + [evRx80Full];
  end;
 
-{ TComThread }
-
 constructor TCOMThread.Create(ACOMPort: TCOMPort);
  begin
-  inherited Create(True);
-  FStopEvent := CreateEvent(nil, True, FALSE, nil);
+  inherited Create(TRUE);
+  FStopEvent := CreateEvent(nil, TRUE, FALSE, nil);
   FCOMPort := ACOMPort;
-  Priority := FCOMPort.CTPriority;
+  Priority := tpLowest;
   FreeOnTerminate := FALSE;
   SetCommMask(FCOMPort.FHandle, EventsToInt(FCOMPort.FEvents));
   Resume;
@@ -281,7 +281,7 @@ procedure TCOMThread.Execute;
 
  begin
   FillChar(Overlapped, SizeOf(Overlapped), 0);
-  Overlapped.hEvent := CreateEvent(nil, True, True, nil);
+  Overlapped.hEvent := CreateEvent(nil, TRUE, TRUE, nil);
   EventHandles[0] := FStopEvent;
   EventHandles[1] := Overlapped.hEvent;
 
@@ -450,12 +450,10 @@ procedure TCOMTimeouts.SetWriteTotalM(const pValue: Integer);
    end;
  end;
 
-{ TCOMPort }
-
-constructor TCOMPort.Create(pOwner: TComponent);
+constructor TCOMPort.Create;
  begin
-  inherited Create(pOwner);
-  FComponentStyle := FComponentStyle - [csInheritable];
+  inherited Create;
+
   FBaudRate := br9600;
   FByteSize := bs8;
   FConnected := FALSE;
@@ -470,7 +468,7 @@ constructor TCOMPort.Create(pOwner: TComponent);
   FSyncMethod := smThreadSync;
   FTimeouts := TCOMTimeouts.Create;
   FTimeouts.SetCOMPort(Self);
-  FUpdate := True;
+  FUpdate := TRUE;
  end;
 
 destructor TCOMPort.Destroy;
@@ -550,7 +548,8 @@ procedure TCOMPort.BeginUpdate;
 procedure TCOMPort.EndUpdate;
  begin
   if not FUpdate then
-   FUpdate := True;
+   FUpdate := TRUE;
+
   SetupCOMPort;
  end;
 
@@ -559,7 +558,7 @@ function TCOMPort.Open: Boolean;
   if not FConnected then
    begin
     CreateHandle;
-    FConnected := True;
+    FConnected := TRUE;
 
     try
      SetupCOMPort;
@@ -1038,17 +1037,6 @@ procedure TCOMPort.SetSyncMethod(const pValue: TSyncMethod);
    end;
  end;
 
-procedure TCOMPort.SetCTPriority(const pValue: TThreadPriority);
- begin
-  if pValue <> FCTPriority then
-   begin
-    if FConnected then
-     raise ECOMPort.Create(STR_MUST_NO_PROPERTY_FOR_OPEN_PORT)
-    else
-     FCTPriority := pValue;
-   end;
- end;
-
 procedure TCOMPort.SetInBufSize(const pValue: Integer);
  begin
   if pValue <> FInBufSize then
@@ -1088,7 +1076,7 @@ procedure comInitAsync(var pAsyncPtr: PAsync);
   with pAsyncPtr^ do
    begin
     FillChar(Overlapped, SizeOf(TOverlapped), 0);
-    Overlapped.hEvent := CreateEvent(nil, True, True, nil);
+    Overlapped.hEvent := CreateEvent(nil, TRUE, TRUE, nil);
     Data := nil;
     Size := 0;
    end;
@@ -1153,11 +1141,6 @@ procedure comEnumPorts(pPorts: TStrings);
    RegCloseKey(KeyHandle);
    TmpPorts.Free;
   end;
- end;
-
-procedure Register;
- begin
-  RegisterComponents('Expand', [TCOMPort]);
  end;
 
 end.

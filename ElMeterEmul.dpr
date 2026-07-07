@@ -11,7 +11,8 @@ uses
   UDialogs in 'SPDLib\UDialogs.pas',
   Class_ElMeter in 'Class_ElMeter.pas',
   Helpers in 'SPDLib\Helpers.pas',
-  UStrings in 'SPDLib\UStrings.pas';
+  UStrings in 'SPDLib\UStrings.pas',
+  COMPort in 'SPDLib\COMPort.pas';
 
 {$R *.res}
 
